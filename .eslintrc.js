@@ -18,7 +18,7 @@ module.exports = {
     'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     semicolon: 0,
     quotes: ['error', 'single'],
-    'prettier/prettier': ['error', { singleQuote: true, semi: 0 }],
+    'prettier/prettier': ['error', { singleQuote: true, semi: false }],
   },
   overrides: [
     {
