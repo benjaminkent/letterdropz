@@ -10,5 +10,8 @@
 }
 body {
   margin: 0;
+  background-color: #edf2ef;
+  color: #212738;
+  margin-top: 60px;
 }
 </style>
