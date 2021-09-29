@@ -3,26 +3,44 @@
     <header>
       <h1>LetterDropz</h1>
     </header>
-    <p>{{ puzzle.questions[1].definition }}</p>
+    <h3>Current Score: {{ currentScore }}</h3>
+    <p class="question-definition">{{ currentQuestion?.definition }}</p>
     <ul class="letter-list">
       <li
         v-for="(letter, index) in puzzle.letters.split('')"
         :key="index"
         :class="[
           'letter-list__item',
-          { drop: guessedLetterIndexes.includes(index) },
+          {
+            drop: guessedLetterIndexes.includes(index),
+            incorrect: incorrectGuess,
+          },
         ]"
-        @click="makeGuess(index)"
+        @click="guessLetter(index, letter)"
       >
         <p class="letter-list__letter">{{ letter }}</p>
       </li>
     </ul>
     <button class="reset-btn" @click="reset">RESET</button>
+    <p v-if="answeredCorrectly" class="correct">{{ correctWord }}!</p>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, Ref } from 'vue'
+import {
+  defineComponent,
+  ref,
+  Ref,
+  onMounted,
+  computed,
+  watchEffect,
+} from 'vue'
+
+interface Question {
+  id: number
+  definition: string
+  answer: string
+}
 
 export default defineComponent({
   name: 'Home',
@@ -31,38 +49,116 @@ export default defineComponent({
       questions: [
         {
           id: 1,
-          definition: 'An action',
+          definition:
+            'To receive or take in the sense of letters, espeically by sight.',
           answer: 'read',
         },
         {
           id: 2,
-          definition: 'To Test someone',
+          definition: 'To defy or challenge someone to do something.',
           answer: 'dare',
         },
         {
           id: 3,
-          definition: 'A nice term for someone',
+          definition: 'Regarded with deep affection.',
           answer: 'dear',
         },
-      ],
+      ] as Question[],
       letters: 'ared',
     })
+    const correctDisplayWordList: Ref<string[]> = ref([
+      'Awesome',
+      'Nice',
+      'Good Job',
+      'Well Done',
+    ])
+    const correctWord: Ref<string | null> = ref(null)
+    let guesses: Ref<{ index: number; letter: string }[]> = ref([])
+    let currentQuestionId: Ref<number | null> = ref(null)
+    let answeredCorrectly: Ref<boolean> = ref(false)
+    let currentScore: Ref<number> = ref(0)
+    let incorrectGuess: Ref<boolean> = ref(false)
 
-    let guessedLetterIndexes: Ref<number[]> = ref([])
+    const goToNextQuestion = () => {
+      if (!currentQuestionId.value) {
+        currentQuestionId.value = 1
+        return
+      }
+
+      currentQuestionId.value++
+    }
 
     const reset = () => {
-      guessedLetterIndexes.value = []
+      guesses.value = []
     }
 
-    const makeGuess = (index: number) => {
-      guessedLetterIndexes.value.push(index)
+    const guessLetter = (index: number, letter: string) => {
+      guesses.value.push({ index, letter })
     }
+
+    const currentQuestion = computed(() =>
+      puzzle.value.questions.find(
+        (question) => question.id === currentQuestionId.value
+      )
+    )
+
+    const guessedLetterIndexes = computed(() => {
+      return guesses.value.map((guess) => guess.index)
+    })
+
+    const guessedLetters = computed(() => {
+      return guesses.value.map((guess) => guess.letter)
+    })
+
+    const getCorrectWord = () => {
+      const randomNumber = Math.floor(
+        Math.random() * correctDisplayWordList.value.length
+      )
+
+      correctWord.value = correctDisplayWordList.value[randomNumber]
+    }
+
+    const testCorrect = () => {
+      if (guessedLetters.value.join('') === currentQuestion.value?.answer) {
+        answeredCorrectly.value = true
+        getCorrectWord()
+        currentScore.value += 1000
+
+        setTimeout(() => {
+          reset()
+          answeredCorrectly.value = false
+          goToNextQuestion()
+        }, 2000)
+      } else {
+        incorrectGuess.value = true
+
+        setTimeout(() => {
+          incorrectGuess.value = false
+          reset()
+        }, 1000)
+      }
+    }
+
+    watchEffect(() => {
+      if (guesses.value.length === puzzle.value.letters.length) {
+        testCorrect()
+      }
+    })
+
+    onMounted(() => goToNextQuestion())
 
     return {
       puzzle,
       guessedLetterIndexes,
-      makeGuess,
+      guessLetter,
       reset,
+      currentQuestion,
+      answeredCorrectly,
+      currentScore,
+      guessedLetters,
+      currentQuestionId,
+      correctWord,
+      incorrectGuess,
     }
   },
 })
@@ -91,6 +187,9 @@ header {
   h1 {
     margin: 0;
   }
+}
+.question-definition {
+  margin: 0 1rem 3rem;
 }
 .letter-list {
   margin: 0;
@@ -124,6 +223,10 @@ header {
     border-color: green;
     color: green;
   }
+  .incorrect {
+    border-color: red;
+    color: red;
+  }
 }
 .reset-btn {
   padding: 1rem 0;
@@ -132,5 +235,11 @@ header {
   width: 80%;
   border: 1px solid #d1d646;
   background-color: #d1d646;
+}
+.correct {
+  position: absolute;
+  font-size: 3rem;
+  transform: rotate(-30deg);
+  color: $coral;
 }
 </style>
